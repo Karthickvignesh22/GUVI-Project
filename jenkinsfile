@@ -1,0 +1,49 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Build') {
+            steps {
+                script {
+                    echo "docker build"
+                    if (env.GIT_BRANCH == 'origin/dev') {
+                        sh 'docker build -t karthick0202/dev:latest .'
+                    } else if (env.GIT_BRANCH == 'origin/main') {
+                        sh 'docker build -t karthick0202/pro:latest .'
+                    }
+                }
+            }
+        }
+        stage('Push') {
+            steps {
+                script {
+                    sh 'docker login -u "karthick0202" -p "$Docker_pass" docker.io'
+                    if (env.GIT_BRANCH == 'origin/dev') {
+                        sh 'docker push karthick0202/dev:latest'
+                    } else if (env.GIT_BRANCH == 'origin/main') {
+                        sh 'docker push karthick0202/pro:latest'
+                    }
+                }
+            }
+        }
+        stage('Deploy') {
+            steps {
+                script {
+                    sh 'docker ps -aq | xargs -r docker rm -f'
+                    if (env.GIT_BRANCH == 'origin/dev') {
+                        sh 'docker run -d -p 800:80 karthick0202/dev:latest'
+                    } else if (env.GIT_BRANCH == 'origin/main') {
+                        sh 'docker run -d -p 80:80 karthick0202/pro:latest'
+                    }
+                }
+            }
+        }
+        stage('Cleanup') {
+            steps {
+                script {
+                    sh 'docker image prune -f'
+                }
+            }
+        }
+    }
+}
